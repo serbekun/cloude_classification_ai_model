@@ -1,0 +1,46 @@
+{
+    "classes": [
+        {
+            "title": "Arvore",
+            "shape": "polygon",
+            "color": "#E92A7C",
+            "geometry_config": {},
+            "id": 8907989,
+            "hotkey": ""
+        },
+        {
+            "title": "Estratocumuliformes",
+            "shape": "polygon",
+            "color": "#33742E",
+            "geometry_config": {},
+            "id": 8907990,
+            "hotkey": ""
+        },
+        {
+            "title": "Estratiformes",
+            "shape": "polygon",
+            "color": "#50D78F",
+            "geometry_config": {},
+            "id": 8907991,
+            "hotkey": ""
+        },
+        {
+            "title": "Cirriformes",
+            "shape": "polygon",
+            "color": "#9769D3",
+            "geometry_config": {},
+            "id": 8907992,
+            "hotkey": ""
+        },
+        {
+            "title": "Cumuliformes",
+            "shape": "polygon",
+            "color": "#F5A623",
+            "geometry_config": {},
+            "id": 8907993,
+            "hotkey": ""
+        }
+    ],
+    "tags": [],
+    "projectType": "images"
+}
