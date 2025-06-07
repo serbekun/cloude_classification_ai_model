@@ -9,12 +9,14 @@ import json
 
 BATCH_SIZE = 16
 EPOCHS = 10
-LEARNING_RATE = 0.000001
+LEARNING_RATE = 0.0001
 MODEL_PATH = os.path.join("..", "models", "cloud_model.pth")
 CLASS_INDEX_PATH = os.path.join("..", "models", "class_to_idx.json")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
+if torch.cuda.is_available():
+    print(f"Available GPUs: {torch.cuda.device_count()}")
 
 class CloudClassifier(nn.Module):
     def __init__(self, num_classes):
@@ -35,7 +37,7 @@ class CloudClassifier(nn.Module):
         x = self.dropout(x)
         x = self.fc2(x)
         return x
-    
+
 class CloudDataset(Dataset):
     def __init__(self, images_dir, labels_file, class_index_file=None, transform=None):
         self.images_dir = images_dir
@@ -43,7 +45,6 @@ class CloudDataset(Dataset):
         with open(labels_file, 'r') as f:
             raw_meta = json.load(f)
         self.labels_data = {}
-
 
         with open("../data_packs/Clouds-1000/meta.json", 'r') as meta_file:
             meta = json.load(meta_file)
@@ -86,35 +87,66 @@ with open("../data_packs/Clouds-1000/meta.json", 'r') as f:
 NUM_CLASSES = len(class_titles)
 
 dataset = CloudDataset(images_dir, labels_file, CLASS_INDEX_PATH, transform=transform)
-dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+dataloader = DataLoader(
+    dataset, 
+    batch_size=BATCH_SIZE, 
+    shuffle=True,
+    num_workers=4,          
+    pin_memory=True    
+)
 
 def load_or_create_model():
-    model = CloudClassifier(NUM_CLASSES).to(device)
+    model = CloudClassifier(NUM_CLASSES)
+    
+    
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs with DataParallel!")
+        model = nn.DataParallel(model)
+    
+    model = model.to(device)
+    
     if os.path.exists(MODEL_PATH):
-        model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+        state_dict = torch.load(MODEL_PATH, map_location=device)
+        if isinstance(model, nn.DataParallel):
+            model.module.load_state_dict(state_dict)
+        else:
+            model.load_state_dict(state_dict)
         print("Model loaded from file.")
     else:
         print("Created new model.")
     return model
 
+
 def train_model(model):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    
+    scaler = torch.cuda.amp.GradScaler(enabled=torch.cuda.is_available())
 
     for epoch in range(EPOCHS):
         model.train()
         running_loss = 0.0
         for images, labels in dataloader:
-            images, labels = images.to(device), labels.to(device)
+            images, labels = images.to(device, non_blocking=True), labels.to(device, non_blocking=True)
+            
             optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            
+            with torch.cuda.amp.autocast(enabled=torch.cuda.is_available()):
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+            
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            
             running_loss += loss.item()
-        print(f"Epoch [{epoch+1}/{EPOCHS}], Loss: {running_loss/len(dataloader):.50f}")
+        
+        avg_loss = running_loss / len(dataloader)
+        print(f"Epoch [{epoch+1}/{EPOCHS}], Loss: {avg_loss:.4f}")
 
-        torch.save(model.state_dict(), MODEL_PATH)
+        save_model = model.module if isinstance(model, nn.DataParallel) else model
+        torch.save(save_model.state_dict(), MODEL_PATH)
         print("Model saved.")
 
 if __name__ == "__main__":
