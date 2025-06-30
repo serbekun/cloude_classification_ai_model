@@ -1,4 +1,0 @@
-Dataset: [Clouds-1000]
-Source: [https://data.mendeley.com/datasets/4pw8vfsnpx/2]
-License: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
-Author(s): [Bruno Juncklaus Martins,Matheus Polli, André Cerentini, Samuel Mantelli, Tiago Chaves, Natan Moreira Branco, André von Wangenheim, Juliano Arrais]
