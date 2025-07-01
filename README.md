@@ -15,4 +15,3 @@ This project trains an AI model for automatic classification of cloud types.
 ## 📄 License
 
 The code in this repository is licensed under the [MIT License](LICENSE).  
-Note: The dataset is under **CC BY 4.0**, not MIT.
